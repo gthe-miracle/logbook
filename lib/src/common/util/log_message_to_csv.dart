@@ -9,18 +9,34 @@ extension LogMessageToCSV on LogBuffer {
   /// CSV BOM for correct csv file formatting
   static const String _csvBom = '\uFEFF';
 
-  /// Writes a CSV file using [compute] for off-main-thread processing
+  /// Number of rows below which the CSV is built synchronously — isolate
+  /// startup costs more than the conversion itself for small buffers.
+  static const int _computeThreshold = 1000;
+
+  /// Writes a CSV file, using [compute] for off-main-thread processing when
+  /// the buffer is large.
   Future<String> toCSVString({bool addBomForExcel = true}) async {
     final rows = [
       ['prefix', 'timestamp', 'message'],
-      ...logs.map((log) => [log.prefix, log.timestampUtc, log.message]),
+      ...logs.map(
+        (log) => [
+          log.prefix,
+          log.timestamp.toUtc().toIso8601String(),
+          log.message,
+        ],
+      ),
     ];
 
-    final csv = await compute(_listToCSV, rows);
+    final csv = rows.length < _computeThreshold
+        ? _listToCSV(rows)
+        : await compute(_listToCSV, rows);
 
-    return '$_csvBom$csv';
+    return addBomForExcel ? '$_csvBom$csv' : csv;
   }
 }
+
+/// Cell prefixes Excel/Sheets interpret as formulas (CSV injection).
+final RegExp _formulaPrefix = RegExp(r'^[=+\-@\t]');
 
 /// Converts a list of rows to CSV format
 String _listToCSV(List<List<Object?>> rows) {
@@ -29,9 +45,15 @@ String _listToCSV(List<List<Object?>> rows) {
     final row = rows[i];
 
     for (var j = 0; j < row.length; j++) {
-      final value = row[j]?.toString() ?? '';
+      var value = row[j]?.toString() ?? '';
 
-      if (value.contains(',') || value.contains('"') || value.contains('\n')) {
+      // Neutralize spreadsheet formula injection.
+      if (_formulaPrefix.hasMatch(value)) value = "'$value";
+
+      if (value.contains(',') ||
+          value.contains('"') ||
+          value.contains('\n') ||
+          value.contains('\r')) {
         buffer.write('"${value.replaceAll('"', '""')}"');
       } else {
         buffer.write(value);

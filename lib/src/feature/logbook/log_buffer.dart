@@ -2,15 +2,16 @@ import 'dart:async' show scheduleMicrotask;
 import 'dart:collection' show Queue;
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show ChangeNotifier;
+import 'package:flutter/foundation.dart' show ChangeNotifier, visibleForTesting;
 
 import '../../../logbook.dart';
-import '../../common/model/log_message.dart';
 import '../../common/util/log_message_to_csv.dart';
 import '../data/logbook_repository.dart';
 
 /// {@template log_buffer}
-/// Log buffer.
+/// In-memory ring buffer of [LogMessage]s shared by the logger, the in-app
+/// viewer and the server upload. Notifies listeners (coalesced per
+/// microtask) whenever its contents change.
 /// {@endtemplate}
 final class LogBuffer with ChangeNotifier {
   /// {@macro log_buffer}
@@ -19,16 +20,38 @@ final class LogBuffer with ChangeNotifier {
   /// {@macro log_buffer_instance}
   static final LogBuffer _instance = LogBuffer._internal();
 
-  final ILogbookRepository _logbookRepository = const LogbookRepositoryImpl();
+  ILogbookRepository _logbookRepository = const LogbookRepositoryImpl();
 
-  /// Instance
+  /// The upload repository (tests only).
+  @visibleForTesting
+  ILogbookRepository get repository => _logbookRepository;
+
+  /// Replaces the upload repository (tests only).
+  @visibleForTesting
+  set repository(ILogbookRepository value) => _logbookRepository = value;
+
+  /// The shared singleton instance.
   static LogBuffer get instance => _instance;
 
-  /// Buffer limit
-  // 64kb -> 2^16
-  // -> 1byte * 1024 = 1kb * 64 -> 64kb * 200(~log_messages_length)
-  // -> 12800kb -> 12.8MB
-  static const int bufferLimit = 65536;
+  /// Maximum number of messages kept; the oldest are evicted beyond it.
+  /// Configured via [LogbookConfig.bufferLimit] (applied by [Logbook.config]).
+  int _bufferLimit = LogbookConfig.defaultBufferLimit;
+
+  /// Maximum number of log messages kept in memory.
+  int get bufferLimit => _bufferLimit;
+
+  set bufferLimit(int value) {
+    assert(value > 0, 'bufferLimit must be positive');
+    if (value <= 0 || value == _bufferLimit) return;
+    _bufferLimit = value;
+    var changed = false;
+    while (_queue.length > _bufferLimit) {
+      _untrackPrefix(_queue.first.prefix);
+      _queue.removeFirst();
+      changed = true;
+    }
+    if (changed) _scheduleNotification();
+  }
 
   /// Queue
   final Queue<LogMessage> _queue = Queue<LogMessage>();
@@ -42,7 +65,7 @@ final class LogBuffer with ChangeNotifier {
   /// Total logs count (monotonically increasing, never clamped)
   int _totalLogsCount = 0;
 
-  /// This is the total logs count in the buffer
+  /// This is the total logs count ever added (not clamped by eviction).
   int get totalLogsCount => _totalLogsCount;
 
   /// Get the logs
@@ -60,7 +83,7 @@ final class LogBuffer with ChangeNotifier {
 
   /// Add a log to the buffer
   void add(LogMessage log) {
-    if (_queue.length >= bufferLimit) {
+    if (_queue.length >= _bufferLimit) {
       _untrackPrefix(_queue.first.prefix);
       _queue.removeFirst();
     }
@@ -70,11 +93,16 @@ final class LogBuffer with ChangeNotifier {
     _scheduleNotification();
   }
 
-  /// Add a list of logs to the buffer
+  /// Add a list of logs to the buffer.
+  ///
+  /// When [logs] exceeds [bufferLimit], only the newest [bufferLimit]
+  /// entries are kept.
   void addAll(List<LogMessage> logs) {
-    final list = logs.take(bufferLimit).toList();
-    if (_queue.length + list.length > bufferLimit) {
-      final toRemove = _queue.length + list.length - bufferLimit;
+    final list = logs.length > _bufferLimit
+        ? logs.sublist(logs.length - _bufferLimit)
+        : logs;
+    if (_queue.length + list.length > _bufferLimit) {
+      final toRemove = _queue.length + list.length - _bufferLimit;
       for (var i = 0; i < toRemove; i++) {
         _untrackPrefix(_queue.first.prefix);
         _queue.removeFirst();
@@ -109,7 +137,8 @@ final class LogBuffer with ChangeNotifier {
     return _queue.skip(available - newCount);
   }
 
-  /// Schedule a notification to be sent after the current frame
+  /// Coalesces notifications: many adds in one microtask burst produce a
+  /// single [notifyListeners] call.
   void _scheduleNotification() {
     if (_notificationScheduled) return;
     _notificationScheduled = true;
@@ -119,13 +148,16 @@ final class LogBuffer with ChangeNotifier {
     });
   }
 
-  /// Sends the logs to the server.
-  Future<void> sendLogsToServer({
+  /// Sends the buffered logs to the server as a CSV multipart upload.
+  ///
+  /// Returns true on success, false when [uri] is null or the upload failed
+  /// (the failure is also logged via [l.s]).
+  Future<bool> sendLogsToServer({
     required final Uri? uri,
     required final String debugFileName,
     required final Map<String, String>? multipartFileFields,
   }) async {
-    if (uri == null) return;
+    if (uri == null) return false;
 
     try {
       final file = await toCSVString();
@@ -137,9 +169,21 @@ final class LogBuffer with ChangeNotifier {
         fileName: debugFileName,
         fields: multipartFileFields,
       );
+      return true;
     } on Object catch (e, s) {
-      l.s('Error on save and send to server: $e', s);
+      l.s('Failed to send logs to server: $e', s);
+      return false;
     }
+  }
+
+  /// Resets the buffer to its initial state (tests only).
+  @visibleForTesting
+  void debugReset() {
+    _queue.clear();
+    _prefixCounts.clear();
+    _totalLogsCount = 0;
+    _bufferLimit = LogbookConfig.defaultBufferLimit;
+    _logbookRepository = const LogbookRepositoryImpl();
   }
 
   @override

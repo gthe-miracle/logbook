@@ -1,9 +1,8 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 
 /// {@template logbook_config}
-/// Logbook config.
+/// Configuration for the [Logbook] overlay and log collection.
 /// {@endtemplate}
 @immutable
 class LogbookConfig {
@@ -15,7 +14,11 @@ class LogbookConfig {
     this.enabled = kDebugMode,
     this.fontFamily = 'Monospace',
     this.themeMode = ThemeMode.system,
-  });
+    this.bufferLimit = defaultBufferLimit,
+  }) : assert(bufferLimit > 0, 'bufferLimit must be positive');
+
+  /// Default maximum number of log messages kept in memory.
+  static const int defaultBufferLimit = 32768;
 
   /// Your server URI.
   final Uri? uri;
@@ -26,14 +29,27 @@ class LogbookConfig {
   /// Debug file name to display file name in the message.
   final String debugFileName;
 
-  /// Whether to enable logbook.
+  /// Whether to enable the logbook overlay.
+  ///
+  /// Log collection into the buffer is independent of this flag, so
+  /// [Logbook.sendLogsToServer] keeps working while the overlay is disabled.
   final bool enabled;
 
-  /// Font family to use for the logbook.
+  /// Font family to use for the logbook viewer.
+  ///
+  /// The default `'Monospace'` takes effect only if your app bundles a font
+  /// family with that name (see the example app); otherwise Flutter silently
+  /// falls back to the default font.
   final String fontFamily;
 
   /// Theme mode to use for changing the theme of the logbook.
   final ThemeMode themeMode;
+
+  /// Maximum number of log messages kept in memory (oldest are evicted).
+  ///
+  /// Applies in all build modes — release builds also collect logs so they
+  /// can be uploaded via [Logbook.sendLogsToServer].
+  final int bufferLimit;
 
   /// Copy with.
   LogbookConfig copyWith({
@@ -43,6 +59,7 @@ class LogbookConfig {
     bool? enabled,
     String? fontFamily,
     ThemeMode? themeMode,
+    int? bufferLimit,
   }) => LogbookConfig(
     uri: uri ?? this.uri,
     multipartFileFields: multipartFileFields ?? this.multipartFileFields,
@@ -50,28 +67,38 @@ class LogbookConfig {
     enabled: enabled ?? this.enabled,
     fontFamily: fontFamily ?? this.fontFamily,
     themeMode: themeMode ?? this.themeMode,
+    bufferLimit: bufferLimit ?? this.bufferLimit,
   );
 
   @override
-  bool operator ==(covariant LogbookConfig other) {
-    if (identical(this, other)) return true;
-
-    return other.uri == uri &&
-        mapEquals(other.multipartFileFields, multipartFileFields) &&
-        other.debugFileName == debugFileName &&
-        other.enabled == enabled &&
-        other.fontFamily == fontFamily &&
-        other.themeMode == themeMode;
-  }
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LogbookConfig &&
+          other.uri == uri &&
+          mapEquals(other.multipartFileFields, multipartFileFields) &&
+          other.debugFileName == debugFileName &&
+          other.enabled == enabled &&
+          other.fontFamily == fontFamily &&
+          other.themeMode == themeMode &&
+          other.bufferLimit == bufferLimit;
 
   @override
-  int get hashCode =>
-      uri.hashCode ^
-      multipartFileFields.hashCode ^
-      debugFileName.hashCode ^
-      enabled.hashCode ^
-      fontFamily.hashCode ^
-      themeMode.hashCode;
+  int get hashCode {
+    final fields = multipartFileFields;
+    return Object.hash(
+      uri,
+      fields == null
+          ? null
+          : Object.hashAllUnordered(
+              fields.entries.map((e) => Object.hash(e.key, e.value)),
+            ),
+      debugFileName,
+      enabled,
+      fontFamily,
+      themeMode,
+      bufferLimit,
+    );
+  }
 
   @override
   String toString() =>
@@ -81,5 +108,6 @@ class LogbookConfig {
       'debugFileName: $debugFileName, '
       'enabled: $enabled, '
       'fontFamily: $fontFamily, '
-      'themeMode: $themeMode)';
+      'themeMode: $themeMode, '
+      'bufferLimit: $bufferLimit)';
 }

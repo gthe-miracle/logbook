@@ -15,64 +15,78 @@ import 'prefix_palette.dart';
 final l = _L._();
 
 /// {@template logger}
-/// Logger class.
+/// The logger behind the global [l] instance.
+///
+/// Every call stores a [LogMessage] in [LogBuffer] (shown by the in-app
+/// viewer and included in server uploads) and, outside of release mode,
+/// prints a colored line to the developer console.
 /// {@endtemplate}
 final class _L {
   /// {@macro logger}
   _L._();
 
-  /// {@macro logger_f}
+  /// Logs a fine/debug message (prefix `F`, black in console).
   final void Function(Object? message) f = _log(
     'F',
     font: ConsoleFont.bold.value,
     foreground: ConsoleColor.black.foregroundValue,
   );
 
-  /// {@macro logger_c}
-  void Function(Object? message) c = _log(
+  /// Logs a config message (prefix `C`, green in console).
+  final void Function(Object? message) c = _log(
     'C',
     font: ConsoleFont.bold.value,
     foreground: ConsoleColor.green.foregroundValue,
   );
 
-  /// {@macro logger_i}
-  void Function(Object? message) i = _log(
+  /// Logs an info message (prefix `I`, blue in console).
+  final void Function(Object? message) i = _log(
     'I',
     font: ConsoleFont.bold.value,
     foreground: ConsoleColor.blue.foregroundValue,
   );
 
-  /// {@macro logger_w}
-  void Function(Object exception, [StackTrace? stackTrace, String? reason]) w =
-      _log(
-        'W',
-        font: ConsoleFont.bold.value,
-        foreground: ConsoleColor.yellow.foregroundValue,
-        background: ConsoleColor.black.backgroundValue,
-      );
+  /// Logs a warning (prefix `W`, yellow in console) with an optional
+  /// [StackTrace] and reason.
+  final void Function(
+    Object exception, [
+    StackTrace? stackTrace,
+    String? reason,
+  ])
+  w = _log(
+    'W',
+    font: ConsoleFont.bold.value,
+    foreground: ConsoleColor.yellow.foregroundValue,
+    background: ConsoleColor.black.backgroundValue,
+  );
 
-  /// {@macro logger_s}
-  void Function(Object exception, [StackTrace? stackTrace, String? reason]) s =
-      _log(
-        'S',
-        font: ConsoleFont.bold.value,
-        foreground: ConsoleColor.red.foregroundValue,
-      );
+  /// Logs a severe error (prefix `S`, red in console) with an optional
+  /// [StackTrace] and reason.
+  final void Function(
+    Object exception, [
+    StackTrace? stackTrace,
+    String? reason,
+  ])
+  s = _log(
+    'S',
+    font: ConsoleFont.bold.value,
+    foreground: ConsoleColor.red.foregroundValue,
+  );
 
-  /// {@macro logger_log}
+  /// Logs [message] under a custom [prefix].
+  ///
+  /// Each distinct prefix gets its own stable color in both the console and
+  /// the in-app viewer.
   void log(
     Object message,
     String prefix, {
     StackTrace? stackTrace,
     bool withMilliseconds = false,
   }) {
-    final logMessage = LogMessage(
-      message: "$message${stackTrace != null ? '\n$stackTrace\n\n' : ''}",
-      timestamp: DateTime.now(),
-      prefix: prefix,
-      color: ConsoleColor.byDefault,
+    final text = _messageText(message, stackTrace, null);
+    LogBuffer.instance.add(
+      LogMessage(message: text, timestamp: DateTime.now(), prefix: prefix),
     );
-    LogBuffer.instance.add(logMessage);
 
     if (kReleaseMode) return;
 
@@ -95,25 +109,18 @@ final class _L {
   ])
   _log(String prefix, {String? font, String? foreground, String? background}) =>
       (message, [stackTrace, reason]) {
-        final logMessage = LogMessage(
-          message: "$message${stackTrace != null ? '\n$stackTrace\n\n' : ''}",
-          timestamp: DateTime.now(),
-          prefix: prefix,
-          color: switch (prefix) {
-            'F' => ConsoleColor.black,
-            'C' => ConsoleColor.green,
-            'I' => ConsoleColor.white,
-            'W' => ConsoleColor.yellow,
-            'S' => ConsoleColor.red,
-            _ => ConsoleColor.magenta,
-          },
+        final text = _messageText(message, stackTrace, reason);
+        LogBuffer.instance.add(
+          LogMessage(message: text, timestamp: DateTime.now(), prefix: prefix),
         );
-        LogBuffer.instance.add(logMessage);
 
         if (kReleaseMode) return;
 
+        final consoleMessage = reason == null
+            ? '$message'
+            : '$message ($reason)';
         final formattedMessage = _formatStyled(
-          '${Constants.esc}$foreground $message',
+          '${Constants.esc}$foreground $consoleMessage',
           prefix,
           font: font,
           foreground: foreground,
@@ -122,14 +129,19 @@ final class _L {
 
         developer.log(formattedMessage, name: '•', stackTrace: stackTrace);
       };
+
+  /// Builds the stored message text: `message (reason)\nstackTrace`.
+  static String _messageText(
+    Object? message,
+    StackTrace? stackTrace,
+    String? reason,
+  ) =>
+      '$message'
+      '${reason != null ? ' ($reason)' : ''}'
+      '${stackTrace != null ? '\n$stackTrace' : ''}';
 }
 
-/// Extension methods for [_L].
-extension _LX on _L {}
-
-/// {@template format_styled}
-/// Format styled.
-/// {@endtemplate}
+/// Formats a console line: `<styled>[prefix]</styled>[hh:mm:ss] message`.
 String _formatStyled(
   Object message,
   String prefix, {
@@ -154,20 +166,4 @@ String _formatStyled(
     ']'
     '$message',
   );
-}
-
-/// Returns the file location
-// ignore: unused_element
-String _getFileLocation({required StackTrace stackTrace}) {
-  final fileLocation =
-      (stackTrace)
-          .toString()
-          .split('\n')
-          .where((e) => e.contains('package'))
-          .skip(1)
-          .firstOrNull ??
-      '';
-  return fileLocation
-      .substring(fileLocation.indexOf('(') + 1, fileLocation.indexOf(')'))
-      .trim();
 }

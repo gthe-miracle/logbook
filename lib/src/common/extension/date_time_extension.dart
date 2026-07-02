@@ -1,22 +1,17 @@
 /// Extension methods for [DateTime].
-extension DateTimeX on DateTime? {
-  /// Formats the time to a string
+extension DateTimeX on DateTime {
+  /// Formats the time-of-day to a string.
   /// example:
   ///   DateTime(2021, 1, 1, 12, 0, 0).timeFormat() -> 12:00:00 (hh:mm:ss)
+  ///   DateTime(2021, 1, 1, 12, 0, 0, 7).timeFormat(withMilliseconds: true)
+  ///     -> 12:00:00.007 (hh:mm:ss.mmm)
   String timeFormat({bool withMilliseconds = false}) {
-    final time = this;
+    String pad2(int value) => value.toString().padLeft(2, '0');
 
-    if (time == null) return '';
-
-    String timePad(int time) => time.toString().padLeft(2, '0');
-
-    final withMillisecondsString = withMilliseconds
-        ? ':${timePad(time.millisecond)}'
+    final millisecondsString = withMilliseconds
+        ? '.${millisecond.toString().padLeft(3, '0')}'
         : '';
 
-    return '${timePad(time.hour)}'
-        ':${timePad(time.minute)}'
-        ':${timePad(time.second)}'
-        '$withMillisecondsString';
+    return '${pad2(hour)}:${pad2(minute)}:${pad2(second)}$millisecondsString';
   }
 }

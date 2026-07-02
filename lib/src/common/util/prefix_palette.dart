@@ -26,12 +26,17 @@ const List<Color> kPrefixPalette = <Color>[
 /// FNV-1a 32-bit hash over UTF-16 code units.
 ///
 /// Deterministic across runs and platforms (unlike `String.hashCode`), so a
-/// given prefix always maps to the same palette entry.
+/// given prefix always maps to the same palette entry. The multiply is split
+/// into 16-bit halves so every intermediate stays below 2^53 and the result
+/// is identical on the web (JS numbers) and the VM.
 int _fnv1a(String s) {
+  const prime = 0x01000193;
   var hash = 0x811C9DC5;
   for (var i = 0; i < s.length; i++) {
     hash = (hash ^ s.codeUnitAt(i)) & 0xFFFFFFFF;
-    hash = (hash * 0x01000193) & 0xFFFFFFFF;
+    hash =
+        ((hash & 0xFFFF) * prime + (((hash >> 16) * prime & 0xFFFF) << 16)) &
+        0xFFFFFFFF;
   }
   return hash;
 }

@@ -1,14 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../logbook.dart';
-import '../../common/model/log_message.dart';
 import '../../common/util/logger_colors.dart';
 import '../../common/util/prefix_palette.dart';
 import '../../common/util/throttling.dart';
-import '../logbook/log_buffer.dart';
 import 'filter_overlay.dart';
 
 part 'logbook_screen_state.dart';
@@ -18,10 +17,18 @@ part 'logbook_screen_state.dart';
 /// {@endtemplate}
 class LogViewerScreen extends StatefulWidget {
   /// {@macro log_viewer_screen}
-  const LogViewerScreen({required this.config, super.key});
+  const LogViewerScreen({
+    required this.config,
+    required this.dismissed,
+    super.key,
+  });
 
   /// {@macro logbook_config}
   final LogbookConfig config;
+
+  /// Whether the hosting panel is closed — while true the screen pauses log
+  /// consumption to keep the closed logbook free of CPU work.
+  final ValueListenable<bool> dismissed;
 
   @override
   State<LogViewerScreen> createState() => _LogViewerScreenState();
@@ -42,7 +49,10 @@ class _LogViewerScreenState extends LogViewerScreenState {
             ? TextField(
                 focusNode: _searchFocusNode,
                 onChanged: _onSearchChanged,
-                decoration: const InputDecoration(border: InputBorder.none),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  hintText: 'Search…',
+                ),
                 style: TextStyle(
                   color: colors.consoleWhite,
                   letterSpacing: -0.5,
@@ -57,22 +67,18 @@ class _LogViewerScreenState extends LogViewerScreenState {
                 ),
               ),
         actions: [
-          Builder(
-            builder: (context) => IconButton(
-              onPressed: () {
-                final offset = (context.findRenderObject() as RenderBox?)
-                    ?.localToGlobal(Offset.zero);
-
-                FilterOverlay.show(
-                  context,
-                  offset: offset ?? Offset.zero,
-                  selectedFilters: selectedFilter,
-                  onSelected: _onFilterTap,
-                );
-              },
+          ListenableBuilder(
+            listenable: Listenable.merge([_selectedFilter, LogBuffer.instance]),
+            builder: (context, child) => IconButton(
+              tooltip: 'Filter by prefix',
+              onPressed: () => FilterOverlay.show(
+                context,
+                selectedFilters: _selectedFilter,
+                onSelected: _onFilterTap,
+              ),
               icon: Icon(
                 Icons.filter_list_rounded,
-                color: selectedFilter.value.isNotEmpty
+                color: _isFiltering
                     ? colors.brilliantAzure
                     : colors.consoleWhite,
               ),
@@ -80,11 +86,13 @@ class _LogViewerScreenState extends LogViewerScreenState {
           ),
 
           IconButton(
+            tooltip: 'Search',
             onPressed: _onSearchTap,
             icon: Icon(Icons.search_rounded, color: colors.consoleWhite),
           ),
 
           IconButton(
+            tooltip: 'Clear view (logs are kept for server upload)',
             onPressed: _onClearLogsTap,
             icon: Icon(
               Icons.delete_outline_outlined,
@@ -94,9 +102,9 @@ class _LogViewerScreenState extends LogViewerScreenState {
         ],
       ),
       body: ListenableBuilder(
-        listenable: activeLogMessages,
+        listenable: Listenable.merge([_activeLogMessages, _selectedFilter]),
         builder: (context, child) {
-          final filteredLogs = logMessages;
+          final filteredLogs = _logMessages;
 
           return NotificationListener<ScrollUpdateNotification>(
             onNotification: _onScrolled,
@@ -104,65 +112,67 @@ class _LogViewerScreenState extends LogViewerScreenState {
               controller: _scrollController,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: CustomScrollView(
-                  controller: _scrollController,
-                  physics: const ClampingScrollPhysics(
-                    parent: AlwaysScrollableScrollPhysics(),
-                  ),
-                  slivers: [
-                    SliverList.builder(
-                      itemCount: filteredLogs.length,
-                      itemBuilder: (context, index) {
-                        final log = filteredLogs[index];
-                        final logColor = colorForPrefix(log.prefix, colors);
-
-                        final child = SelectableText.rich(
-                          style: const TextStyle(height: 0),
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: '[${log.prefix}]',
-                                style: TextStyle(
-                                  color: logColor,
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 11,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                              TextSpan(
-                                text: '[${log.timestamp}] ',
-                                style: TextStyle(
-                                  color: colors.brilliantAzure,
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 11,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                              TextSpan(
-                                text: log.message,
-                                style: TextStyle(
-                                  color: logColor,
-                                  fontWeight: FontWeight.w400,
-                                  fontSize: 11,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-
-                        if (index.isEven) {
-                          return ColoredBox(
-                            color: colors.gray.withAlpha(30),
-                            child: child,
-                          );
-                        }
-                        return child;
-                      },
+                child: SelectionArea(
+                  child: CustomScrollView(
+                    controller: _scrollController,
+                    physics: const ClampingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
                     ),
+                    slivers: [
+                      SliverList.builder(
+                        itemCount: filteredLogs.length,
+                        itemBuilder: (context, index) {
+                          final log = filteredLogs[index];
+                          final logColor = colorForPrefix(log.prefix, colors);
 
-                    const SliverToBoxAdapter(child: SizedBox(height: 128)),
-                  ],
+                          final child = Text.rich(
+                            style: const TextStyle(height: kTextHeightNone),
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '[${log.prefix}]',
+                                  style: TextStyle(
+                                    color: logColor,
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 11,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: '[${log.formattedTime}] ',
+                                  style: TextStyle(
+                                    color: colors.brilliantAzure,
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 11,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: log.message,
+                                  style: TextStyle(
+                                    color: logColor,
+                                    fontWeight: FontWeight.w400,
+                                    fontSize: 11,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (index.isEven) {
+                            return ColoredBox(
+                              color: colors.gray.withAlpha(30),
+                              child: child,
+                            );
+                          }
+                          return child;
+                        },
+                      ),
+
+                      const SliverToBoxAdapter(child: SizedBox(height: 128)),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -176,8 +186,10 @@ class _LogViewerScreenState extends LogViewerScreenState {
           ValueListenableBuilder(
             valueListenable: _isSendingLogToServer,
             builder: (context, isLoading, child) => FloatingActionButton(
+              heroTag: null,
+              tooltip: 'Send logs to server',
               backgroundColor: colors.consoleWhite,
-              onPressed: onSaveAndSendToServerTap,
+              onPressed: _onSaveAndSendToServerTap,
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
                 child: switch (isLoading) {
@@ -199,8 +211,10 @@ class _LogViewerScreenState extends LogViewerScreenState {
             ),
           ),
           FloatingActionButton(
+            heroTag: null,
+            tooltip: 'Scroll to bottom',
             backgroundColor: colors.consoleWhite,
-            onPressed: scrollToBottom,
+            onPressed: _scrollToBottom,
             child: Icon(
               Icons.arrow_downward_rounded,
               color: colors.loggerBackground,

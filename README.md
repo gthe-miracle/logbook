@@ -14,10 +14,10 @@ A powerful, elegant, and developer-friendly logging package for Flutter applicat
 - 🎨 **Comprehensive UI Overlay** - Slide-in panel with color-coded logs
 - 📊 **Multiple Log Levels** - Fine, Config, Info, Warning, Severe, and Custom
 - 🔍 **Real-Time Viewing** - See logs as they happen in your app
-- 📱 **Sever Integration** - Send logs to your sever for remote debugging in CSV format
-- 🚀 **Lightweight** - Minimal performance impact
-- 🔧 **Configurable** - Enable/disable in different environments
-- 📦 **No Dependencies** - Only depends on Flutter SDK and http package
+- 📱 **Server Integration** - Send logs to your server for remote debugging in CSV format
+- 🚀 **Lightweight** - Near-zero cost while the panel is closed
+- 🔧 **Configurable** - Enable/disable and reconfigure at runtime
+- 📦 **No Dependencies** - Only depends on Flutter SDK and the http package
 
 ---
 
@@ -27,7 +27,7 @@ Add `logbook` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  logbook: ^0.0.1 # Replace with actual version
+  logbook: ^0.6.0
 ```
 
 Then run:
@@ -42,7 +42,7 @@ flutter pub get
 
 ### 1. Wrap Your App
 
-Wrap your `MaterialApp` with the `Logbook` widget:
+Wrap your app with the `Logbook` widget, preferably via `MaterialApp.builder`:
 
 ```dart
 import 'package:flutter/material.dart';
@@ -61,15 +61,15 @@ class MyApp extends StatelessWidget {
       title: 'My App',
       home: const HomePage(),
       builder: (context, child) => Logbook(
-        config: LogbookConfig(
-          enabled: true,
-        ),
+        config: const LogbookConfig(enabled: true),
         child: child ?? const SizedBox.shrink(),
       ),
     );
   }
 }
 ```
+
+Only mount one `Logbook` at a time — its configuration is process-global.
 
 ### 2. Start Logging
 
@@ -87,7 +87,15 @@ void someFunction() {
 
 ### 3. View Logs
 
-Tap the small overlay handle on the side of your screen to open the log viewer!
+Tap the small overlay handle on the side of your screen to open the log viewer — or open it programmatically:
+
+```dart
+Logbook.stateOf(context).open(); // also: .close(), .toggle(), .isOpen
+```
+
+> The trash button in the viewer clears the **view only** — the underlying
+> buffer keeps its logs, so a later "send to server" still uploads the full
+> history. Use `LogBuffer.instance.clear()` to drop the buffer itself.
 
 ---
 
@@ -98,22 +106,22 @@ Tap the small overlay handle on the side of your screen to open the log viewer!
 Logbook provides several log types, each with its own color and purpose:
 
 ```dart
-// Fine - Detailed debugging information (Black)
+// Fine - Detailed debugging information
 l.f('User data loaded: ${user.name}');
 
 // Config - Configuration information (Green)
 l.c('API endpoint: https://api.example.com');
 
-// Info - General information messages (Blue)
+// Info - General information messages (Blue in console)
 l.i('User logged in successfully');
 
-// Warning - Potential issues (Yellow/Orange)
+// Warning - Potential issues (Yellow); the reason is appended to the message
 l.w('Network latency is high', StackTrace.current, 'Performance Issue');
 
 // Severe - Errors and exceptions (Red)
 l.s('Failed to load data', StackTrace.current, 'API Error');
 
-// Custom - Your own log type (Purple)
+// Custom - Your own log type, with a stable per-prefix color
 l.log('Custom event occurred', 'CUSTOM');
 ```
 
@@ -150,10 +158,27 @@ void main() {
 
 ### Send Logs to Server
 
-Send logs to your server for remote debugging in CSV format (uses configs from Logbook widget):
+Send the buffered logs to your server as a CSV multipart upload (uses the
+current `Logbook.config`). Returns `true` on success:
 
 ```dart
-Logbook.sendLogsToServer(context);
+final success = await Logbook.sendLogsToServer();
+```
+
+The file is posted as `multipart/form-data` under the `document` field,
+with `multipartFileFields` added as regular form fields. Requests time out
+after 30 seconds, and non-2xx responses are treated as failures.
+
+### Runtime Configuration
+
+The constructor config seeds the initial value; you can read or replace it at
+any time and the overlay updates live:
+
+```dart
+Logbook.config = Logbook.config.copyWith(themeMode: ThemeMode.dark);
+
+// React to changes:
+Logbook.configListenable.addListener(() => print(Logbook.config));
 ```
 
 ---
@@ -167,11 +192,13 @@ Configure Logbook behavior with `LogbookConfig`:
 ```dart
 Logbook(
   config: LogbookConfig(
-    enabled: kDebugMode,                                // Enable only in debug mode
-    debugFileName: 'app_logs.csv',                      // CSV export filename
-    uri: 'YOUR_SEVER_URI',                              // Optional: Server URI
-    multipartFileFields: 'YOUR_MULTIPART_FILE_FIELDS',  // Optional: Multipart file fields
-    fontFamily: 'Monospace',                            // Optional: Font family
+    enabled: kDebugMode,                        // Show overlay only in debug mode
+    debugFileName: 'app_logs.csv',              // CSV export filename
+    uri: Uri.parse('https://your.server/logs'), // Optional: server URI
+    multipartFileFields: {'caption': '#logs'},  // Optional: extra form fields
+    fontFamily: 'Monospace',                    // Optional: font family
+    themeMode: ThemeMode.system,                // Optional: overlay theme
+    bufferLimit: 10000,                         // Optional: max buffered logs
   ),
   child: child ?? const SizedBox.shrink(),
 )
@@ -179,13 +206,15 @@ Logbook(
 
 #### Parameters
 
-| Parameter             | Type      | Default            | Description                              |
-| --------------------- | --------- | ------------------ | ---------------------------------------- |
-| `enabled`             | `bool`    | `kDebugMode`       | Enable/disable the logbook overlay       |
-| `debugFileName`       | `String`  | `'debug_info.csv'` | Filename for CSV exports to server       |
-| `uri`                 | `String?` | `null`             | Server URI for remote logging            |
-| `multipartFileFields` | `String?` | `null`             | Multipart file fields for remote logging |
-| `fontFamily`          | `String`  | `'Monospace'`      | Font family for the logbook              |
+| Parameter             | Type                   | Default            | Description                                                                                     |
+| --------------------- | ---------------------- | ------------------ | ----------------------------------------------------------------------------------------------- |
+| `enabled`             | `bool`                 | `kDebugMode`       | Show/hide the logbook overlay (log collection continues either way)                             |
+| `debugFileName`       | `String`               | `'debug_info.csv'` | Filename for CSV exports to the server                                                          |
+| `uri`                 | `Uri?`                 | `null`             | Server URI for remote logging                                                                   |
+| `multipartFileFields` | `Map<String, String>?` | `null`             | Extra multipart form fields for remote logging                                                  |
+| `fontFamily`          | `String`               | `'Monospace'`      | Viewer font; takes effect only if your app bundles a font family with this name                 |
+| `themeMode`           | `ThemeMode`            | `ThemeMode.system` | Overlay theme (light, dark, or follow the system)                                               |
+| `bufferLimit`         | `int`                  | `10000`            | Max log messages kept in memory (oldest evicted) — applies in release builds too                |
 
 ---
 
@@ -204,7 +233,7 @@ The example app demonstrates:
 - Async operations logging
 - Error handling
 - Background timer logs
-- Beautiful UI showcasing the package
+- Runtime config changes (live theme toggle)
 
 ---
 
@@ -222,7 +251,7 @@ l.f(Object? message);
 // Config log
 l.c(Object? message);
 
-// Warning log
+// Warning log (reason is appended to the stored message)
 l.w(Object exception, [StackTrace? stackTrace, String? reason]);
 
 // Severe/Error log
@@ -235,25 +264,22 @@ l.log(Object message, String prefix, {
 });
 ```
 
-### LogbookConfig
+### Logbook
 
 ```dart
-const LogbookConfig({
-  Uri? uri,
-  Map<String, String>? multipartFileFields,
-  String debugFileName = 'debug_info.csv',
-  bool enabled = kDebugMode,
-  String fontFamily = 'Monospace',
-});
+Logbook.config;                    // Current LogbookConfig (get/set, live)
+Logbook.configListenable;          // ValueListenable<LogbookConfig>
+Logbook.stateOf(context).open();   // Programmatic panel control
+await Logbook.sendLogsToServer();  // Future<bool>
 ```
 
 ### LogBuffer
 
 ```dart
-// Access the log buffer
-LogBuffer.instance.logs; // Get all logs
-LogBuffer.instance.clear(); // Clear all logs
-LogBuffer.instance.add(logMessage); // Add a log
+LogBuffer.instance.logs;            // Iterable<LogMessage> (oldest first)
+LogBuffer.instance.logsPrefix;      // Distinct prefixes currently buffered
+LogBuffer.instance.clear();         // Drop all buffered logs
+LogBuffer.instance.add(logMessage); // Add your own LogMessage
 ```
 
 ---

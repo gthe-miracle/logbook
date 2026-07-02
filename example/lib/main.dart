@@ -4,7 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logbook/logbook.dart';
 
-void main() => runZonedGuarded(() => runApp(const MyApp()), l.s);
+void main() => runZonedGuarded(() {
+  l.i('Main function started');
+  runApp(const MyApp());
+}, l.s);
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -26,19 +29,18 @@ class MyApp extends StatelessWidget {
       ),
       useMaterial3: true,
     ),
-    themeMode: ThemeMode.system,
+    themeMode: ThemeMode.dark,
     home: const LogbookDemo(),
     builder: (context, child) => Logbook(
       config: LogbookConfig(
-        multipartFileFields: const {
-          'chat_id': '-4828715107',
-          'caption': '#test',
-        },
-        uri: Uri.parse(
-          'https://api.telegram.org/bot8095680656:AAHlU9Jkl60Gb_BQU7rbWFjfLa-_7h2HQJM/sendDocument',
-        ),
+        // Point this at your own endpoint. For a Telegram bot it would be
+        // https://api.telegram.org/bot<YOUR_BOT_TOKEN>/sendDocument with
+        // multipartFileFields: {'chat_id': '<YOUR_CHAT_ID>'}.
+        // Never commit real tokens.
+        uri: Uri.parse('https://example.com/upload'),
+        multipartFileFields: const {'caption': '#logbook'},
         enabled: kDebugMode,
-        debugFileName: '${DateTime.now().toIso8601String()}.csv',
+        debugFileName: 'debug_${DateTime.now().millisecondsSinceEpoch}.csv',
       ),
       child: child ?? const SizedBox.shrink(),
     ),

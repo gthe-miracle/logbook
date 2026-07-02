@@ -1,55 +1,44 @@
 import 'package:flutter/foundation.dart';
 
 import '../extension/date_time_extension.dart';
-import 'console_color.dart';
 
 /// {@template log_message}
-/// Log message model.
+/// A single immutable log entry held by the log buffer: a [prefix]
+/// (level or custom tag), the [message] text, and the [timestamp] it was
+/// recorded at.
 /// {@endtemplate}
 @immutable
 final class LogMessage {
   /// {@macro log_message}
   const LogMessage({
     required this.message,
-    required DateTime timestamp,
+    required this.timestamp,
     required this.prefix,
-    required this.color,
-  }) : _timestamp = timestamp;
+  });
 
-  /// The prefix of the log message.
+  /// The prefix of the log message, e.g. `I`, `W`, `S` or a custom tag.
   final String prefix;
 
-  /// The message of the log message.
+  /// The text of the log message.
   final String message;
 
-  /// The color of the log message.
-  final ConsoleColor color;
+  /// The moment the log message was recorded (local time).
+  final DateTime timestamp;
 
-  /// The timestamp of the log message.
-  final DateTime _timestamp;
-
-  /// The timestamp of the log message in the format of hh:mm:ss.
-  String get timestamp => _timestamp.timeFormat(withMilliseconds: true);
-
-  /// The timestamp of the log message in the format of UTC hh:mm:ss.
-  String get timestampUtc =>
-      'UTC ${_timestamp.toUtc().timeFormat(withMilliseconds: true)}';
+  /// The time-of-day of [timestamp] in the format `hh:mm:ss.mmm`.
+  String get formattedTime => timestamp.timeFormat(withMilliseconds: true);
 
   @override
-  String toString() => '[$prefix]\t[$timestamp]\t$message';
+  String toString() => '[$prefix]\t[$formattedTime]\t$message';
 
   @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-
-    return other is LogMessage &&
-        other.prefix == prefix &&
-        other.message == message &&
-        other.color == color &&
-        other.timestamp == timestamp;
-  }
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LogMessage &&
+          other.prefix == prefix &&
+          other.message == message &&
+          other.timestamp == timestamp;
 
   @override
-  int get hashCode =>
-      prefix.hashCode ^ message.hashCode ^ color.hashCode ^ timestamp.hashCode;
+  int get hashCode => Object.hash(prefix, message, timestamp);
 }

@@ -10,9 +10,6 @@ abstract class LogViewerScreenState extends State<LogViewerScreen> {
   /// Throttling for logs changed
   late final Throttling<void> _logsChangedThrottling;
 
-  /// Font family
-  String get fontFamily => widget.config.fontFamily;
-
   /// Scroll controller
   late final ScrollController _scrollController;
 
@@ -23,10 +20,11 @@ abstract class LogViewerScreenState extends State<LogViewerScreen> {
   late final ValueNotifier<bool> _isSendingLogToServer;
 
   /// Sending log to server enabled
-  bool get sendingLogToServerEnabled => widget.config.uri != null;
+  bool get _sendingLogToServerEnabled => widget.config.uri != null;
 
-  /// Selected filter — Set for O(1) lookups
-  ValueNotifier<Set<String>> selectedFilter = ValueNotifier({'All'});
+  /// Selected prefixes. Holds real prefixes only — the "All" checkbox state
+  /// is derived ([_isAllSelected]), never stored.
+  final ValueNotifier<Set<String>> _selectedFilter = ValueNotifier(<String>{});
 
   /// Whether the user has explicitly interacted with the filter
   bool _filterInteracted = false;
@@ -40,8 +38,10 @@ abstract class LogViewerScreenState extends State<LogViewerScreen> {
   /// Consumed logs count
   int _consumedLogsCount = 0;
 
-  /// Log messages
-  late final ValueNotifier<List<LogMessage>> activeLogMessages;
+  /// Log messages consumed from the buffer so far.
+  final ValueNotifier<List<LogMessage>> _activeLogMessages = ValueNotifier(
+    <LogMessage>[],
+  );
 
   /// Search query
   String _searchQuery = '';
@@ -49,22 +49,24 @@ abstract class LogViewerScreenState extends State<LogViewerScreen> {
   /// Debounce timer for search input
   Timer? _searchDebounce;
 
-  /// Whether all available prefixes are selected
-  bool get _isAllSelected {
-    final allPrefixes = LogBuffer.instance.logsPrefix;
-    return allPrefixes.isNotEmpty &&
-        allPrefixes.every(selectedFilter.value.contains);
-  }
+  /// Whether the panel is currently visible (not dismissed).
+  bool get _visible => !widget.dismissed.value;
+
+  /// Whether some prefix is currently filtered out.
+  bool get _isFiltering => LogBuffer.instance.logsPrefix.any(
+    (p) => !_selectedFilter.value.contains(p),
+  );
 
   /// Log messages filtered by prefix and search query.
   /// Cache the result in a local variable — do not
   /// call this getter more than once per frame.
-  List<LogMessage> get logMessages {
-    var messages = activeLogMessages.value;
+  List<LogMessage> get _logMessages {
+    var messages = _activeLogMessages.value;
 
-    if (selectedFilter.value.isNotEmpty) {
+    if (_isFiltering) {
+      final selected = _selectedFilter.value;
       messages = messages
-          .where((log) => selectedFilter.value.contains(log.prefix))
+          .where((log) => selected.contains(log.prefix))
           .toList();
     }
 
@@ -75,7 +77,7 @@ abstract class LogViewerScreenState extends State<LogViewerScreen> {
             (log) =>
                 log.message.toLowerCase().contains(lower) ||
                 log.prefix.toLowerCase().contains(lower) ||
-                log.timestamp.toString().toLowerCase().contains(lower),
+                log.formattedTime.contains(lower),
           )
           .toList();
     }
@@ -83,8 +85,8 @@ abstract class LogViewerScreenState extends State<LogViewerScreen> {
     return messages;
   }
 
-  /// Method that handles the logs changed listener
-  void _onLogsChangedListener() => _logsChangedThrottling.throttle(() {
+  /// Pulls new logs out of the buffer into [_activeLogMessages].
+  void _consumeNewLogs() {
     final newLogs = LogBuffer.instance
         .logsSince(_consumedLogsCount)
         .toList(growable: false);
@@ -93,23 +95,39 @@ abstract class LogViewerScreenState extends State<LogViewerScreen> {
     if (newLogs.isEmpty) return;
 
     if (!_filterInteracted) {
-      final newPrefixes = LogBuffer.instance.logsPrefix.where(
-        (p) => !selectedFilter.value.contains(p),
-      );
-      if (newPrefixes.isNotEmpty) selectedFilter.value.addAll(newPrefixes);
+      final selected = _selectedFilter.value;
+      final newPrefixes = LogBuffer.instance.logsPrefix
+          .where((p) => !selected.contains(p))
+          .toList(growable: false);
+      if (newPrefixes.isNotEmpty) {
+        _selectedFilter.value = {...selected, ...newPrefixes};
+      }
     }
 
-    final current = activeLogMessages.value;
-    final combined = [...current, ...newLogs];
+    final combined = [..._activeLogMessages.value, ...newLogs];
+    final limit = LogBuffer.instance.bufferLimit;
+    _activeLogMessages.value = combined.length > limit
+        ? combined.sublist(combined.length - limit)
+        : combined;
+  }
 
-    if (combined.length > LogBuffer.bufferLimit) {
-      activeLogMessages.value = combined.sublist(
-        combined.length - LogBuffer.bufferLimit,
-      );
+  /// Buffer listener — consumption is paused while the panel is hidden
+  /// ([_onVisibilityChanged] catches up on open), so a closed logbook does
+  /// no filtering/layout work.
+  void _onLogsChangedListener() {
+    if (!_visible) return;
+    _logsChangedThrottling.throttle(_consumeNewLogs);
+  }
+
+  /// Reacts to the panel being opened or closed.
+  void _onVisibilityChanged() {
+    if (_visible) {
+      _consumeNewLogs();
+      _scrollToBottomListener();
     } else {
-      activeLogMessages.value = combined;
+      FilterOverlay.hide();
     }
-  });
+  }
 
   /// Method that handles the search tap
   void _onSearchTap() {
@@ -118,10 +136,7 @@ abstract class LogViewerScreenState extends State<LogViewerScreen> {
       if (!_isSearchEnabled) _searchQuery = '';
     });
 
-    if (_isSearchEnabled) {
-      _searchFocusNode.requestFocus();
-      selectedFilter.value = LogBuffer.instance.logsPrefix.toSet();
-    }
+    if (_isSearchEnabled) _searchFocusNode.requestFocus();
   }
 
   /// Handles search input — debounced to avoid
@@ -129,57 +144,60 @@ abstract class LogViewerScreenState extends State<LogViewerScreen> {
   void _onSearchChanged(String value) {
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 200), () {
+      if (!mounted) return;
       setState(() => _searchQuery = value.trim());
     });
   }
 
-  /// Method that handles the filter tap
+  /// Toggles a filter entry. `'All'` selects every prefix; deselecting the
+  /// last remaining prefix snaps back to everything selected, so an empty
+  /// selection is unreachable.
   void _onFilterTap(String value) {
     _filterInteracted = true;
+    final prefixes = LogBuffer.instance.logsPrefix.toSet();
+    final current = _selectedFilter.value;
 
     if (value == 'All') {
-      if (_isAllSelected) {
-        selectedFilter.value.clear();
-      } else {
-        selectedFilter.value = LogBuffer.instance.logsPrefix.toSet();
-        selectedFilter.value.add('All');
-      }
+      _selectedFilter.value = prefixes;
     } else {
-      if (selectedFilter.value.contains(value)) {
-        selectedFilter.value.remove(value);
-      } else {
-        selectedFilter.value.add(value);
-      }
+      final next = current.contains(value)
+          ? ({...current}..remove(value))
+          : {...current, value};
+      _selectedFilter.value = next.isEmpty ? prefixes : next;
     }
-
-    setState(() {});
   }
 
-  /// Method that handles scroll notifications to track user scroll position
+  /// Tracks whether the user scrolled away from the bottom (pauses
+  /// auto-follow) or returned to it (resumes).
   bool _onScrolled(ScrollUpdateNotification notification) {
-    if (notification.metrics.pixels <
-        notification.metrics.maxScrollExtent - 100) {
+    final metrics = notification.metrics;
+    // Only a user drag pauses auto-follow — programmatic auto-scroll
+    // animations racing with new logs must not.
+    if (notification.dragDetails != null &&
+        metrics.pixels < metrics.maxScrollExtent - 100) {
       _isUserScrolled = true;
-    } else if (notification.metrics.pixels ==
-        notification.metrics.maxScrollExtent) {
+    } else if (metrics.pixels >= metrics.maxScrollExtent - 1) {
       _isUserScrolled = false;
     }
     return true;
   }
 
   /// Method that handles the scroll to bottom listener
-  void _scrollToBottomListener() => _scrollToBottomThrottling.throttle(() {
-    if (_scrollController.hasClients && !_isUserScrolled) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  });
+  void _scrollToBottomListener() {
+    if (!_visible) return;
+    _scrollToBottomThrottling.throttle(() {
+      if (_scrollController.hasClients && !_isUserScrolled) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
 
   /// Method that handles the scroll to bottom tap
-  void scrollToBottom() {
+  void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
@@ -190,8 +208,8 @@ abstract class LogViewerScreenState extends State<LogViewerScreen> {
   }
 
   /// Method that handles the save and send to server tap
-  Future<void> onSaveAndSendToServerTap() async {
-    if (!sendingLogToServerEnabled) {
+  Future<void> _onSaveAndSendToServerTap() async {
+    if (!_sendingLogToServerEnabled) {
       l.w('Sending log to server is not enabled');
 
       ScaffoldMessenger.of(context)
@@ -215,17 +233,32 @@ abstract class LogViewerScreenState extends State<LogViewerScreen> {
 
     HapticFeedback.selectionClick().ignore();
 
-    await LogBuffer.instance.sendLogsToServer(
+    final success = await LogBuffer.instance.sendLogsToServer(
       uri: widget.config.uri,
       debugFileName: widget.config.debugFileName,
       multipartFileFields: widget.config.multipartFileFields,
     );
 
+    if (!mounted) return;
     _isSendingLogToServer.value = false;
+
+    if (!success) {
+      ScaffoldMessenger.of(context)
+        ..removeCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Failed to send logs to the server. '
+              'Check the server URI and your connection.',
+            ),
+          ),
+        );
+    }
   }
 
-  /// Method that clears the active logs
-  void _onClearLogsTap() => activeLogMessages.value = [];
+  /// Clears the on-screen list only — the underlying buffer keeps its logs,
+  /// so a later server upload still contains the full history.
+  void _onClearLogsTap() => _activeLogMessages.value = [];
 
   /* #region Lifecycle */
   @override
@@ -243,21 +276,38 @@ abstract class LogViewerScreenState extends State<LogViewerScreen> {
     _searchFocusNode = FocusNode();
     _isSendingLogToServer = ValueNotifier(false);
 
-    activeLogMessages = ValueNotifier(<LogMessage>[]);
-
     LogBuffer.instance
       ..addListener(_scrollToBottomListener)
       ..addListener(_onLogsChangedListener);
+    widget.dismissed.addListener(_onVisibilityChanged);
+
+    // Seed with everything already in the buffer — logs recorded before the
+    // Logbook widget mounted must be visible without waiting for a new log.
+    _consumeNewLogs();
+  }
+
+  @override
+  void didUpdateWidget(covariant LogViewerScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.dismissed, widget.dismissed)) {
+      oldWidget.dismissed.removeListener(_onVisibilityChanged);
+      widget.dismissed.addListener(_onVisibilityChanged);
+    }
   }
 
   @override
   void dispose() {
+    FilterOverlay.hide();
+
     LogBuffer.instance
       ..removeListener(_onLogsChangedListener)
       ..removeListener(_scrollToBottomListener);
+    widget.dismissed.removeListener(_onVisibilityChanged);
 
     _searchDebounce?.cancel();
     _isSendingLogToServer.dispose();
+    _activeLogMessages.dispose();
+    _selectedFilter.dispose();
     _searchFocusNode.dispose();
     _scrollController.dispose();
 

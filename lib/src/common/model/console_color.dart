@@ -28,10 +28,7 @@ enum ConsoleColor {
   cyan,
 
   /// White color
-  white,
-
-  /// Default color
-  byDefault;
+  white;
 
   /// {@macro console_color}
   const ConsoleColor();
@@ -49,7 +46,6 @@ extension ConsoleColorX on ConsoleColor {
     ConsoleColor.magenta => '35m',
     ConsoleColor.cyan => '36m',
     ConsoleColor.white => '37m',
-    ConsoleColor.byDefault => '',
   };
 
   /// Ansi background colors for terminal
@@ -62,7 +58,6 @@ extension ConsoleColorX on ConsoleColor {
     ConsoleColor.magenta => '45m',
     ConsoleColor.cyan => '46m',
     ConsoleColor.white => '47m',
-    ConsoleColor.byDefault => '',
   };
 
   /// Converts the console color to a [Color] using the given [LoggerColors].
@@ -75,11 +70,5 @@ extension ConsoleColorX on ConsoleColor {
     ConsoleColor.magenta => loggerColors.consoleMagenta,
     ConsoleColor.blue => loggerColors.consoleBlue,
     ConsoleColor.cyan => loggerColors.consoleCyan,
-    ConsoleColor.byDefault => loggerColors.consoleDefault,
   };
-
-  /// Converts the console color to a [Color]
-  /// by resolving [LoggerColors] from context.
-  Color consoleColorToColor(BuildContext context) =>
-      toColor(LoggerColors.of(context));
 }
