@@ -151,7 +151,7 @@ final class LogBuffer with ChangeNotifier {
   /// Sends the buffered logs to the server as a CSV multipart upload.
   ///
   /// Returns true on success, false when [uri] is null or the upload failed
-  /// (the failure is also logged via [l.s]).
+  /// (the failure is also logged via `l.s`).
   Future<bool> sendLogsToServer({
     required final Uri? uri,
     required final String debugFileName,
