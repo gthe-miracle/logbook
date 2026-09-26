@@ -196,7 +196,7 @@ Logbook(
     debugFileName: 'app_logs.csv',              // CSV export filename
     uri: Uri.parse('https://your.server/logs'), // Optional: server URI
     multipartFileFields: {'caption': '#logs'},  // Optional: extra form fields
-    fontFamily: 'Monospace',                    // Optional: font family
+    fontFamily: 'FreeMono',                    // Optional: font family
     themeMode: ThemeMode.system,                // Optional: overlay theme
     bufferLimit: 10000,                         // Optional: max buffered logs
   ),
@@ -212,7 +212,7 @@ Logbook(
 | `debugFileName`       | `String`               | `'debug_info.csv'` | Filename for CSV exports to the server                                                          |
 | `uri`                 | `Uri?`                 | `null`             | Server URI for remote logging                                                                   |
 | `multipartFileFields` | `Map<String, String>?` | `null`             | Extra multipart form fields for remote logging                                                  |
-| `fontFamily`          | `String`               | `'Monospace'`      | Viewer font; takes effect only if your app bundles a font family with this name                 |
+| `fontFamily`          | `String`               | `'FreeMono'`      | Viewer font; takes effect only if your app bundles a font family with this name                 |
 | `themeMode`           | `ThemeMode`            | `ThemeMode.system` | Overlay theme (light, dark, or follow the system)                                               |
 | `bufferLimit`         | `int`                  | `10000`            | Max log messages kept in memory (oldest evicted) — applies in release builds too                |
 

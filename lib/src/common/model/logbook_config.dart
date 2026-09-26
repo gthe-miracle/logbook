@@ -12,7 +12,7 @@ class LogbookConfig {
     this.multipartFileFields,
     this.debugFileName = 'debug_info.csv',
     this.enabled = kDebugMode,
-    this.fontFamily = 'Monospace',
+    this.fontFamily = 'FreeMono',
     this.themeMode = ThemeMode.system,
     this.bufferLimit = defaultBufferLimit,
   }) : assert(bufferLimit > 0, 'bufferLimit must be positive');
@@ -37,7 +37,7 @@ class LogbookConfig {
 
   /// Font family to use for the logbook viewer.
   ///
-  /// The default `'Monospace'` takes effect only if your app bundles a font
+  /// The default `'FreeMono'` takes effect only if your app bundles a font
   /// family with that name (see the example app); otherwise Flutter silently
   /// falls back to the default font.
   final String fontFamily;
