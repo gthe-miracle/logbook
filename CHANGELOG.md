@@ -1,3 +1,10 @@
+## 0.6.1
+
+### Changed
+
+- Default `LogbookConfig.fontFamily` is now `'FreeMono'` (was `'Monospace'`). If your app bundles a font under the family name `Monospace` and relied on the default, pass `fontFamily: 'Monospace'` explicitly or rename the family to `FreeMono`
+- Example app now bundles FreeMono Bold and targets iOS 15.0
+
 ## 0.6.0
 
 ### Fixed

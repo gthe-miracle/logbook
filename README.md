@@ -27,7 +27,7 @@ Add `logbook` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  logbook: ^0.6.0
+  logbook: ^0.6.1
 ```
 
 Then run:
