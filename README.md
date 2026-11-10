@@ -3,10 +3,10 @@
 A powerful, elegant, and developer-friendly logging package for Flutter applications. Logbook provides an intuitive overlay UI for viewing logs in real-time, with support for different log levels, color coding, and optional server integration for remote debugging.
 
 <div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 10px;">
-  <img src="https://github.com/Miracle-Blue/logbook/raw/main/screenshots/screenshot_1.png" width="180" alt="Logbook Overview">
-  <img src="https://github.com/Miracle-Blue/logbook/raw/main/screenshots/screenshot_2.png" width="180" alt="Logbook filter">
-  <img src="https://github.com/Miracle-Blue/logbook/raw/main/screenshots/screenshot_3.png" width="180" alt="Logbook filter">
-  <img src="https://github.com/Miracle-Blue/logbook/raw/main/screenshots/screenshot_4.png" width="180" alt="Logbook search">
+  <img src="https://github.com/gthe-miracle/logbook/raw/main/screenshots/screenshot_1.png" width="180" alt="Logbook Overview">
+  <img src="https://github.com/gthe-miracle/logbook/raw/main/screenshots/screenshot_2.png" width="180" alt="Logbook filter">
+  <img src="https://github.com/gthe-miracle/logbook/raw/main/screenshots/screenshot_3.png" width="180" alt="Logbook filter">
+  <img src="https://github.com/gthe-miracle/logbook/raw/main/screenshots/screenshot_4.png" width="180" alt="Logbook search">
 </div>
 
 ## ✨ Features
@@ -211,15 +211,15 @@ Logbook(
 
 #### Parameters
 
-| Parameter             | Type                   | Default            | Description                                                                                     |
-| --------------------- | ---------------------- | ------------------ | ----------------------------------------------------------------------------------------------- |
-| `enabled`             | `bool`                 | `kDebugMode`       | Show/hide the logbook overlay (log collection continues either way)                             |
-| `debugFileName`       | `String`               | `'debug_info.csv'` | Filename for CSV exports to the server                                                          |
-| `uri`                 | `Uri?`                 | `null`             | Server URI for remote logging                                                                   |
-| `multipartFileFields` | `Map<String, String>?` | `null`             | Extra multipart form fields for remote logging                                                  |
-| `fontFamily`          | `String`               | `'FreeMono'`      | Viewer font; takes effect only if your app bundles a font family with this name                 |
-| `themeMode`           | `ThemeMode`            | `ThemeMode.system` | Overlay theme (light, dark, or follow the system); `ThemeMode` comes from `material_ui`         |
-| `bufferLimit`         | `int`                  | `32768`            | Max log messages kept in memory (oldest evicted) — applies in release builds too                |
+| Parameter             | Type                   | Default            | Description                                                                             |
+| --------------------- | ---------------------- | ------------------ | --------------------------------------------------------------------------------------- |
+| `enabled`             | `bool`                 | `kDebugMode`       | Show/hide the logbook overlay (log collection continues either way)                     |
+| `debugFileName`       | `String`               | `'debug_info.csv'` | Filename for CSV exports to the server                                                  |
+| `uri`                 | `Uri?`                 | `null`             | Server URI for remote logging                                                           |
+| `multipartFileFields` | `Map<String, String>?` | `null`             | Extra multipart form fields for remote logging                                          |
+| `fontFamily`          | `String`               | `'FreeMono'`       | Viewer font; takes effect only if your app bundles a font family with this name         |
+| `themeMode`           | `ThemeMode`            | `ThemeMode.system` | Overlay theme (light, dark, or follow the system); `ThemeMode` comes from `material_ui` |
+| `bufferLimit`         | `int`                  | `32768`            | Max log messages kept in memory (oldest evicted) — applies in release builds too        |
 
 ---
 
@@ -302,5 +302,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <p align="center">
-  If you find this package useful, give it a ⭐ on <a href="https://github.com/Miracle-Blue/logbook">GitHub</a>!
+  If you find this package useful, give it a ⭐ on <a href="https://github.com/gthe-miracle/logbook">GitHub</a>!
 </p>
