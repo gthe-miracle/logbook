@@ -1,15 +1,19 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:logbook/logbook.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() => runZonedGuarded(() {
   l.i('Main function started');
   runApp(const MyApp());
 }, l.s);
 
+/// {@template my_app}
+/// Root widget of the Logbook demo: a [MaterialApp] wrapped in a [Logbook].
+/// {@endtemplate}
 class MyApp extends StatelessWidget {
+  /// {@macro my_app}
   const MyApp({super.key});
 
   @override
@@ -47,7 +51,11 @@ class MyApp extends StatelessWidget {
   );
 }
 
+/// {@template logbook_demo}
+/// Demo screen with buttons that emit each kind of log.
+/// {@endtemplate}
 class LogbookDemo extends StatefulWidget {
+  /// {@macro logbook_demo}
   const LogbookDemo({super.key});
 
   @override
@@ -174,7 +182,9 @@ class _LogbookDemoState extends State<LogbookDemo> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Interact with the buttons below to generate different types of logs.\nOpen the Logbook overlay to view them!',
+                        'Interact with the buttons below to generate '
+                        'different types of logs.\n'
+                        'Open the Logbook overlay to view them!',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),

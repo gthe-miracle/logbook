@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show ValueListenable;
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../logbook.dart';
 import '../../common/util/logger_colors.dart';
@@ -17,11 +17,7 @@ part 'logbook_screen_state.dart';
 /// {@endtemplate}
 class LogViewerScreen extends StatefulWidget {
   /// {@macro log_viewer_screen}
-  const LogViewerScreen({
-    required this.config,
-    required this.dismissed,
-    super.key,
-  });
+  const new({required this.config, required this.dismissed, super.key});
 
   /// {@macro logbook_config}
   final LogbookConfig config;

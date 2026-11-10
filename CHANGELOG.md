@@ -1,3 +1,12 @@
+## 1.0.0
+
+### Changed
+
+- **Breaking:** migrated from `package:flutter/material.dart` to [`material_ui`](https://pub.dev/packages/material_ui). Material was decoupled from the Flutter SDK; the in-SDK copy is frozen and scheduled for removal ([flutter/flutter#184093](https://github.com/flutter/flutter/issues/184093), [flutter/flutter#172942](https://github.com/flutter/flutter/issues/172942))
+- **Breaking:** `LogbookConfig.themeMode` now takes `ThemeMode` from `package:material_ui/material_ui.dart`, which is a different type from the SDK's `ThemeMode`
+- **Breaking:** requires Flutter >= 3.47.0 and Dart >= 3.13.0. Apps still on `package:flutter/material.dart` should stay on 0.6.1
+- Screenshots updated
+
 ## 0.6.1
 
 ### Changed
@@ -28,7 +37,7 @@
 - **Breaking:** `Logbook.sendLogsToServer()` and `LogBuffer.sendLogsToServer(...)` now return `Future<bool>` (true on success); upload failures show a SnackBar in the viewer
 - **Breaking:** `LogbookState` no longer exposes `dismissed` and the drag handlers; use the new `open()`, `close()`, `toggle()` and `isOpen` instead
 - **Breaking:** `LogMessage.timestamp` is now the raw `DateTime` (formatted string moved to `formattedTime`); the unused `color` field was removed
-- Default in-memory buffer limit lowered from 65,536 to 10,000 messages and made configurable via `LogbookConfig.bufferLimit` (applies in release builds too)
+- Default in-memory buffer limit lowered from 65,536 to 32,768 messages and made configurable via `LogbookConfig.bufferLimit` (applies in release builds too)
 - The closed panel no longer does any filtering/layout work — log consumption pauses while hidden and catches up on open
 - Log rows use a shared `SelectionArea` (cross-row copy now works) instead of one `SelectableText` per row
 - Opening search no longer overwrites the active prefix filter; the search field has a hint; the clear button documents that it clears the view only

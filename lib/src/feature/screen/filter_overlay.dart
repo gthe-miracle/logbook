@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart' show ValueListenable;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../common/util/logger_colors.dart';
 import '../logbook/log_buffer.dart';
@@ -11,7 +11,7 @@ import '../logbook/log_buffer.dart';
 /// {@endtemplate}
 class FilterOverlay extends StatelessWidget {
   /// {@macro filter_overlay}
-  const FilterOverlay({
+  const new({
     required this.onSelected,
     required this.selectedFilters,
     super.key,
@@ -36,8 +36,8 @@ class FilterOverlay extends StatelessWidget {
   /// Shows the filter overlay.
   static void show(
     BuildContext context, {
-    required final ValueListenable<Set<String>> selectedFilters,
-    required final void Function(String value) onSelected,
+    required ValueListenable<Set<String>> selectedFilters,
+    required void Function(String value) onSelected,
   }) {
     hide();
 
@@ -129,7 +129,7 @@ class FilterOverlay extends StatelessWidget {
 
 /// A single checkbox row of the filter overlay.
 class _FilterRow extends StatelessWidget {
-  const _FilterRow({
+  const new({
     required this.label,
     required this.isSelected,
     required this.showDivider,

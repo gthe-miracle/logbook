@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' show ThemeMode;
+import 'package:material_ui/material_ui.dart' show ThemeMode;
 
 /// {@template logbook_config}
 /// Configuration for the [Logbook] overlay and log collection.
@@ -7,7 +7,7 @@ import 'package:flutter/material.dart' show ThemeMode;
 @immutable
 class LogbookConfig {
   /// {@macro logbook_config}
-  const LogbookConfig({
+  const new({
     this.uri,
     this.multipartFileFields,
     this.debugFileName = 'debug_info.csv',

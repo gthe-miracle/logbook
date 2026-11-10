@@ -15,7 +15,7 @@ enum ConsoleFont {
   byDefault;
 
   /// {@macro console_font}
-  const ConsoleFont();
+  new();
 }
 
 /// Extension methods for [ConsoleFont].

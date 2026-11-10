@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// {@template app_colors}
 /// Emphasis class
@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 @immutable
 final class LoggerColors extends ThemeExtension<LoggerColors> {
   /// {@macro app_colors}
-  const LoggerColors({
+  const new({
     required this.consoleWhite,
     required this.consoleBlack,
     required this.consoleYellow,
@@ -23,7 +23,7 @@ final class LoggerColors extends ThemeExtension<LoggerColors> {
   });
 
   /// Gets the logger colors from the theme.
-  factory LoggerColors.of(BuildContext context) {
+  factory of(BuildContext context) {
     try {
       final theme = Theme.of(context);
 

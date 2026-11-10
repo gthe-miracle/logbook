@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show ValueListenable;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../logbook.dart';
 import '../../common/util/logger_colors.dart';
@@ -18,7 +18,7 @@ part 'logbook_state.dart';
 /// {@endtemplate}
 class Logbook extends StatefulWidget {
   /// {@macro Logbook}
-  const Logbook({
+  const new({
     required this.child,
     LogbookConfig config = const LogbookConfig(),
     super.key,
@@ -131,9 +131,8 @@ class _LogbookState extends LogbookState {
             ThemeMode.dark => _darkTheme,
             _ => Theme.of(context),
           }.copyWith(
-            textTheme: Theme.of(
-              context,
-            ).textTheme.apply(fontFamily: Logbook.config.fontFamily),
+            textTheme: Theme.of(context).textTheme
+                .apply(fontFamily: Logbook.config.fontFamily),
           ),
       child: SizedBox(
         width: width,
@@ -144,7 +143,6 @@ class _LogbookState extends LogbookState {
                 visible: !_dismissed.value,
                 maintainState: true,
                 child: Material(
-                  elevation: 0,
                   child: DefaultSelectionStyle(
                     child: ScaffoldMessenger(
                       child: HeroControllerScope.none(
@@ -175,7 +173,6 @@ class _LogbookState extends LogbookState {
                   borderRadius: const BorderRadius.horizontal(
                     right: Radius.circular(16),
                   ),
-                  elevation: 0,
                   child: InkWell(
                     onTap: toggle,
                     borderRadius: const BorderRadius.horizontal(
@@ -235,7 +232,6 @@ class _LogbookState extends LogbookState {
                         end: Colors.black.withAlpha(127),
                       ),
                     ),
-                    dismissible: true,
                     semanticsLabel: 'Dismiss',
                     onDismiss: close,
                   ),

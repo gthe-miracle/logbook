@@ -5,10 +5,9 @@ import 'package:http/http.dart' as http;
 /// {@template i_logbook_repository}
 /// Logbook repository interface.
 /// {@endtemplate}
-// ignore: one_member_abstracts
 abstract interface class ILogbookRepository {
   /// {@macro i_logbook_repository}
-  const ILogbookRepository();
+  const new();
 
   /// Sends a log file to the server.
   ///
@@ -17,8 +16,8 @@ abstract interface class ILogbookRepository {
   Future<void> sendLog(
     Uri uri,
     Uint8List bytes, {
-    required final String fileName,
-    final Map<String, String>? fields,
+    required String fileName,
+    Map<String, String>? fields,
   });
 }
 
@@ -29,9 +28,9 @@ abstract interface class ILogbookRepository {
 final class LogbookRepositoryImpl implements ILogbookRepository {
   /// {@macro logbook_repository_impl}
   ///
-  /// A custom [client] can be supplied (e.g. a mock in tests); by default
+  /// A custom `client` can be supplied (e.g. a mock in tests); by default
   /// a short-lived client is used per request.
-  const LogbookRepositoryImpl({http.Client? client}) : _client = client;
+  const new({this._client});
 
   /// Maximum time for the whole upload round-trip.
   static const Duration _timeout = Duration(seconds: 30);
@@ -42,15 +41,15 @@ final class LogbookRepositoryImpl implements ILogbookRepository {
   Future<void> sendLog(
     Uri uri,
     Uint8List bytes, {
-    required final String fileName,
-    final Map<String, String>? fields,
+    required String fileName,
+    Map<String, String>? fields,
   }) => _send(uri, bytes, fileName: fileName, fields: fields).timeout(_timeout);
 
   Future<void> _send(
     Uri uri,
     Uint8List bytes, {
-    required final String fileName,
-    final Map<String, String>? fields,
+    required String fileName,
+    Map<String, String>? fields,
   }) async {
     final request = http.MultipartRequest('POST', uri)
       ..fields.addAll(fields ?? {})

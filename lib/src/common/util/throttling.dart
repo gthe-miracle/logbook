@@ -8,7 +8,7 @@ enum ThrottlingStatus {
   /// Waiting for the end of the pause
   busy;
 
-  const ThrottlingStatus();
+  new();
 
   /// Ready to accept new events
   bool get isIdle => this == ThrottlingStatus.idle;
@@ -30,7 +30,7 @@ final class Throttling<T> extends Stream<ThrottlingStatus>
   /// Throttling
   /// Have method [throttle]
   /// Must be closed with [close] method
-  Throttling({Duration duration = const Duration(seconds: 1)})
+  new({Duration duration = const Duration(seconds: 1)})
     : assert(!duration.isNegative, 'Duration must be positive'),
       _duration = duration {
     _stateSC.sink.add(ThrottlingStatus.idle);

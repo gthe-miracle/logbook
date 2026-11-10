@@ -1,19 +1,18 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logbook/logbook.dart';
 import 'package:logbook/src/feature/data/logbook_repository.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   setUp(() {
     LogBuffer.instance.debugReset();
-    Logbook.config = const LogbookConfig(enabled: true);
+    Logbook.config = const LogbookConfig();
   });
 
-  Widget app({LogbookConfig config = const LogbookConfig(enabled: true)}) =>
-      Logbook(
-        config: config,
-        child: const MaterialApp(home: Scaffold(body: SizedBox.expand())),
-      );
+  Widget app({LogbookConfig config = const LogbookConfig()}) => Logbook(
+    config: config,
+    child: const MaterialApp(home: Scaffold(body: SizedBox.expand())),
+  );
 
   Future<void> openPanel(WidgetTester tester) async {
     await tester.tap(find.byIcon(Icons.chevron_right));
@@ -149,10 +148,7 @@ void main() {
 
       await tester.pumpWidget(
         app(
-          config: LogbookConfig(
-            enabled: true,
-            uri: Uri.parse('https://example.com/upload'),
-          ),
+          config: LogbookConfig(uri: Uri.parse('https://example.com/upload')),
         ),
       );
       await openPanel(tester);
@@ -180,7 +176,6 @@ void main() {
       await tester.pumpWidget(
         app(
           config: LogbookConfig(
-            enabled: true,
             uri: Uri.parse('https://example.com/upload'),
             debugFileName: 'session.csv',
           ),

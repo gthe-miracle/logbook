@@ -9,7 +9,7 @@ part of 'logbook.dart';
 abstract class LogbookState extends State<Logbook>
     with SingleTickerProviderStateMixin {
   /// {@macro logbook_state}
-  LogbookState();
+  new();
 
   /// Animation controller driving the slide-in panel.
   late final AnimationController _controller;

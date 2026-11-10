@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../util/logger_colors.dart';
 
@@ -31,7 +31,7 @@ enum ConsoleColor {
   white;
 
   /// {@macro console_color}
-  const ConsoleColor();
+  new();
 }
 
 /// Extension methods for [ConsoleColor].

@@ -23,7 +23,7 @@ final l = _L._();
 /// {@endtemplate}
 final class _L {
   /// {@macro logger}
-  _L._();
+  new _();
 
   /// Logs a fine/debug message (prefix `F`, black in console).
   final void Function(Object? message) f = _log(
@@ -150,7 +150,7 @@ String _formatStyled(
   String? background,
   bool withMilliseconds = false,
 }) {
-  final buffer = StringBuffer('');
+  final buffer = StringBuffer();
   for (final value in [font, foreground, background]) {
     if (value != null) buffer.writeEsc(value);
   }

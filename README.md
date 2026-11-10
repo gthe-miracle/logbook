@@ -17,7 +17,7 @@ A powerful, elegant, and developer-friendly logging package for Flutter applicat
 - 📱 **Server Integration** - Send logs to your server for remote debugging in CSV format
 - 🚀 **Lightweight** - Near-zero cost while the panel is closed
 - 🔧 **Configurable** - Enable/disable and reconfigure at runtime
-- 📦 **No Dependencies** - Only depends on Flutter SDK and the http package
+- 📦 **Minimal Dependencies** - Only depends on the Flutter SDK, `material_ui` and `http`
 
 ---
 
@@ -27,7 +27,7 @@ Add `logbook` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  logbook: ^0.6.1
+  logbook: ^1.0.0
 ```
 
 Then run:
@@ -35,6 +35,11 @@ Then run:
 ```bash
 flutter pub get
 ```
+
+Logbook 1.x requires Flutter >= 3.47.0 and Dart >= 3.13.0, and builds on
+[`material_ui`](https://pub.dev/packages/material_ui) instead of
+`package:flutter/material.dart`. Apps still on `package:flutter/material.dart`
+should use `logbook: ^0.6.1`.
 
 ---
 
@@ -45,8 +50,8 @@ flutter pub get
 Wrap your app with the `Logbook` widget, preferably via `MaterialApp.builder`:
 
 ```dart
-import 'package:flutter/material.dart';
 import 'package:logbook/logbook.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   runApp(const MyApp());
@@ -143,8 +148,8 @@ Catch all uncaught errors in your app:
 
 ```dart
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'package:logbook/logbook.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   runZonedGuarded(
@@ -198,7 +203,7 @@ Logbook(
     multipartFileFields: {'caption': '#logs'},  // Optional: extra form fields
     fontFamily: 'FreeMono',                    // Optional: font family
     themeMode: ThemeMode.system,                // Optional: overlay theme
-    bufferLimit: 10000,                         // Optional: max buffered logs
+    bufferLimit: 32768,                         // Optional: max buffered logs
   ),
   child: child ?? const SizedBox.shrink(),
 )
@@ -213,8 +218,8 @@ Logbook(
 | `uri`                 | `Uri?`                 | `null`             | Server URI for remote logging                                                                   |
 | `multipartFileFields` | `Map<String, String>?` | `null`             | Extra multipart form fields for remote logging                                                  |
 | `fontFamily`          | `String`               | `'FreeMono'`      | Viewer font; takes effect only if your app bundles a font family with this name                 |
-| `themeMode`           | `ThemeMode`            | `ThemeMode.system` | Overlay theme (light, dark, or follow the system)                                               |
-| `bufferLimit`         | `int`                  | `10000`            | Max log messages kept in memory (oldest evicted) — applies in release builds too                |
+| `themeMode`           | `ThemeMode`            | `ThemeMode.system` | Overlay theme (light, dark, or follow the system); `ThemeMode` comes from `material_ui`         |
+| `bufferLimit`         | `int`                  | `32768`            | Max log messages kept in memory (oldest evicted) — applies in release builds too                |
 
 ---
 

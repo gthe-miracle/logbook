@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logbook/logbook.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   setUp(() {
     LogBuffer.instance.debugReset();
-    Logbook.config = const LogbookConfig(enabled: true);
+    Logbook.config = const LogbookConfig();
   });
 
   Future<void> openPanel(WidgetTester tester) async {
@@ -22,10 +22,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        const Logbook(
-          config: LogbookConfig(enabled: true),
-          child: MaterialApp(home: _CounterPage()),
-        ),
+        const Logbook(child: MaterialApp(home: _CounterPage())),
       );
 
       await tester.tap(find.text('increment'));
@@ -45,10 +42,7 @@ void main() {
 
     testWidgets('the handle opens and closes the panel', (tester) async {
       await tester.pumpWidget(
-        const Logbook(
-          config: LogbookConfig(enabled: true),
-          child: MaterialApp(home: _CounterPage()),
-        ),
+        const Logbook(child: MaterialApp(home: _CounterPage())),
       );
 
       expect(find.text('Debug console'), findsNothing);
@@ -66,10 +60,7 @@ void main() {
       l.i('early bird message');
 
       await tester.pumpWidget(
-        const Logbook(
-          config: LogbookConfig(enabled: true),
-          child: MaterialApp(home: _CounterPage()),
-        ),
+        const Logbook(child: MaterialApp(home: _CounterPage())),
       );
       await openPanel(tester);
 
@@ -81,10 +72,7 @@ void main() {
 
     testWidgets('logs arriving while closed appear on open', (tester) async {
       await tester.pumpWidget(
-        const Logbook(
-          config: LogbookConfig(enabled: true),
-          child: MaterialApp(home: _CounterPage()),
-        ),
+        const Logbook(child: MaterialApp(home: _CounterPage())),
       );
       await tester.pump();
 
@@ -100,10 +88,7 @@ void main() {
 
     testWidgets('stateOf opens the panel programmatically', (tester) async {
       await tester.pumpWidget(
-        const Logbook(
-          config: LogbookConfig(enabled: true),
-          child: MaterialApp(home: _CounterPage()),
-        ),
+        const Logbook(child: MaterialApp(home: _CounterPage())),
       );
 
       final context = tester.element(find.byType(_CounterPage));
@@ -126,7 +111,7 @@ void main() {
 }
 
 class _CounterPage extends StatefulWidget {
-  const _CounterPage();
+  const new();
 
   @override
   State<_CounterPage> createState() => _CounterPageState();

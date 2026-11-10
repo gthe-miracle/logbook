@@ -3,7 +3,7 @@
 /// {@endtemplate}
 sealed class Constants {
   /// {@macro constants}
-  const Constants._();
+  const new _();
 
   /// Ansi escape
   static const String esc = '\x1B[';

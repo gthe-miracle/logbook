@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logbook/logbook.dart';
+import 'package:material_ui/material_ui.dart' show ThemeMode;
 
 void main() {
   group('LogbookConfig', () {

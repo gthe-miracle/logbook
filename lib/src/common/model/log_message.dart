@@ -10,7 +10,7 @@ import '../extension/date_time_extension.dart';
 @immutable
 final class LogMessage {
   /// {@macro log_message}
-  const LogMessage({
+  const new({
     required this.message,
     required this.timestamp,
     required this.prefix,

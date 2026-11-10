@@ -15,7 +15,7 @@ import '../data/logbook_repository.dart';
 /// {@endtemplate}
 final class LogBuffer with ChangeNotifier {
   /// {@macro log_buffer}
-  LogBuffer._internal();
+  new _internal();
 
   /// {@macro log_buffer_instance}
   static final LogBuffer _instance = LogBuffer._internal();
@@ -153,9 +153,9 @@ final class LogBuffer with ChangeNotifier {
   /// Returns true on success, false when [uri] is null or the upload failed
   /// (the failure is also logged via `l.s`).
   Future<bool> sendLogsToServer({
-    required final Uri? uri,
-    required final String debugFileName,
-    required final Map<String, String>? multipartFileFields,
+    required Uri? uri,
+    required String debugFileName,
+    required Map<String, String>? multipartFileFields,
   }) async {
     if (uri == null) return false;
 
